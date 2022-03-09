@@ -1,10 +1,9 @@
 #!/usr/bin/python
 
-#+ Convert images to arrays of they rgb data
-#+ Get the contrast of the rgb and associate to a letter
-#+ Print the output
-#+ Extra parameters: Invert and external output
-#+ Files: Main File, Image File and Color File
+#+ Fix Resize (not resize, interpole)
+#+ Error handler of: Wrong file type, output non writable, already exist, non folder and dependencies
+#+ Help text
+#+ Color with hex?
 
 from pathlib import Path
 from colorama import Fore, Style
@@ -17,7 +16,7 @@ colorama.init()
 
 # Main command of the app
 @app.callback(invoke_without_command=True)
-def ascii(image_path: Path):
+def ascii(image_path: Path, invert: bool = typer.Option(False, '-i', '--invert'), output: Path = typer.Option('', '-o', '--output')):
     # Check if image exist and is in the correct format
     if not image_path.exists():
         error('The path doesn\'t exist!')
@@ -26,15 +25,15 @@ def ascii(image_path: Path):
         error('The path isn\'t a file')
         
     density, width = image(image_path)
-    image_str = associate(density)
-    print_(image_str, width)
+    image_str = associate(density, invert)
+    print_(image_str, width, output)
 
 def image(path: Path):
     # Get the density of the image with the average of the rgb
     # Opening it with PIL and making the calcs
     with Image.open(path.absolute().as_posix()) as image:
         #! The resize tilt the image
-        fixed_image = image#.resize((int(image.width*0.9999999999999999), int(image.height*0.9999999999999999)), Image.ANTIALIAS)
+        fixed_image = image#?.resize((int(image.width*0.9999999999999999), int(image.height*0.9999999999999999)), Image.ANTIALIAS)
         rgb = fixed_image.load()
         density = []
         
@@ -44,12 +43,16 @@ def image(path: Path):
         
         return density, image.width
 
-def associate(density: list):
+def associate(density: list, invert):
     # Generating a dict with all the associations leter to density
     # And put all into a string
     # Get a density dict
     density_dict = {}
-    letters = "$@B%8&WM\#*oahkbdpqwmZO0QLCJUYXzcvunxrjft/\|()1{}[]?-_+~<>i!lI;:,\"^`'. "[::-1]
+    if invert:
+        order = 1
+    else:
+        order = -1
+    letters = "$@B%8&WM\#*oahkbdpqwmZO0QLCJUYXzcvunxrjft/\|()1{}[]?-_+~<>i!lI;:,\'^`'. "[::order]
     chars_per_letter = int(255/len(letters))
     numbers = list(range(0,256))
     for i, letter in enumerate(letters):
@@ -57,7 +60,7 @@ def associate(density: list):
             density_dict[o] = letter
     
     # Get the full string
-    densified_letters = ""
+    densified_letters = ''
     for i in density:
         i = int(i)
         if i > 212:
@@ -66,11 +69,31 @@ def associate(density: list):
         
     return densified_letters
 
-def print_(image_str: str, width: int):
+def print_(image_str: str, width: int, output: Path):
+    # Print the output and save it if output path exist
     lines = []
     for i in range(0, len(image_str), width):
         lines.append(image_str[i:i+width])
-    print('\n'.join(lines))
+    spaced_output = '\n'.join(lines)
+    typer.echo(spaced_output) # The final output
+    
+    # Put the output too a external file if the user request it
+    if not output == Path('.'):
+        if not output.parents[0].exists():
+            # Check if the parent folders exist and ask too creat them
+            warning('The directories too the file doesn\'t exist. You want to create them? (Y/n)')
+            answer = input(f'{Fore.BLUE+Style.BRIGHT}[ INPUT ]{Style.RESET_ALL} ->').upper()
+            if answer == 'Y' or '\n':
+                output.parents[0].mkdir(parents=True, exist_ok=True)
+                success('Created the missing folders')
+            else:
+                error('Path not available')
+            
+        # Create and write in the file itself
+        output.touch()
+        with open(output, 'w') as file:
+            file.write(spaced_output)
+        success(f'Output file created at {output}')
 
 def error(message: str = 'An unexpected error has occurred'):
     # Standard error message
