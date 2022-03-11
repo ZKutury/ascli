@@ -1,12 +1,13 @@
 #!/usr/bin/python
 
 #+ Fix Resize (not resize, interpole)
-#+ Error handler of: Wrong file type, output non writable, already exist, non folder and dependencies
+#+ Error handler of: Wrong file type, output non writable, already exist and dependencies
 #+ Help text
-#+ Color with hex?
+#+ Read -r --read
 
 from pathlib import Path
 from colorama import Fore, Style
+from rgbprint.new_print import _print as print
 import colorama
 from PIL import Image
 import typer
@@ -16,7 +17,7 @@ colorama.init()
 
 # Main command of the app
 @app.callback(invoke_without_command=True)
-def ascii(image_path: Path, invert: bool = typer.Option(False, '-i', '--invert'), output: Path = typer.Option('', '-o', '--output')):
+def ascii(image_path: Path, invert: bool = typer.Option(False, '-i', '--invert'), output: Path = typer.Option('', '-o', '--output'), color: str = typer.Option('#FFFFFF', '-c', '--color')):
     # Check if image exist and is in the correct format
     if not image_path.exists():
         error('The path doesn\'t exist!')
@@ -26,7 +27,7 @@ def ascii(image_path: Path, invert: bool = typer.Option(False, '-i', '--invert')
         
     density, width = image(image_path)
     image_str = associate(density, invert)
-    print_(image_str, width, output)
+    print_(image_str, width, output, color)
 
 def image(path: Path):
     # Get the density of the image with the average of the rgb
@@ -69,35 +70,44 @@ def associate(density: list, invert):
         
     return densified_letters
 
-def print_(image_str: str, width: int, output: Path):
+def print_(image_str: str, width: int, output: Path, color: str):
     # Print the output and save it if output path exist
     lines = []
     for i in range(0, len(image_str), width):
         lines.append(image_str[i:i+width])
     spaced_output = '\n'.join(lines)
-    typer.echo(spaced_output) # The final output
+    print(spaced_output, color=color, end='\n\n') # The final output
     
+    # If the user request it the app put the output too a external file
+    save_output(spaced_output, output)
+
+def save_output(spaced_output, output):
     # Put the output too a external file if the user request it
-    if not output == Path('.'):
-        if not output.parents[0].exists():
-            # Check if the parent folders exist and ask too creat them
-            warning('The directories too the file doesn\'t exist. You want to create them? (Y/n)')
-            answer = input(f'{Fore.BLUE+Style.BRIGHT}[ INPUT ]{Style.RESET_ALL} ->').upper()
-            if answer == 'Y' or '\n':
-                output.parents[0].mkdir(parents=True, exist_ok=True)
-                success('Created the missing folders')
-            else:
-                error('Path not available')
+    if output == Path('.'):
+        return
+    
+    if not output.parents[0].exists():
+        # Check if the parent folders exist and ask too create them
+        warning('The directories too the file doesn\'t exist. You want to create them? (Y/n)')
+        answer = input(f'{Fore.BLUE+Style.BRIGHT}[ INPUT ]{Style.RESET_ALL} -> ').upper()
+        if answer == 'Y' or '\n':
+            output.parents[0].mkdir(parents=True, exist_ok=True)
+            success('Created the missing folders')
+        else:
+            error('Path not available')
             
-        # Create and write in the file itself
-        output.touch()
-        with open(output, 'w') as file:
-            file.write(spaced_output)
-        success(f'Output file created at {output}')
+    # Create and write in the file itself
+    output.touch()
+    with open(output, 'w') as file:
+        file.write(spaced_output)
+    success(f'Output file created at {output}')
+
+def read():
+    pass
 
 def error(message: str = 'An unexpected error has occurred'):
     # Standard error message
-    typer.echo(f'{Fore.RED+Style.BRIGHT}[ ERROR ]{Style.RESET_ALL} {message}')
+    typer.echo(f'{Fore.RED+Style.BRIGHT}[ ERROR ]{Style.RESET_ALL} {message}', err=True)
     raise typer.Exit(code=1)
 
 def warning(message: str = 'Something is wrong'):
