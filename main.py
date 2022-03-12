@@ -1,9 +1,10 @@
 #!/usr/bin/python
 
 #+ Fix Resize (not resize, interpole)
-#+ Error handler of: Wrong file type, output non writable, already exist and dependencies
+#+ Error handler of: Wrong file type, output non writable, already exist and dependencies, file incorrect read
 #+ Help text
 #+ Read -r --read
+#+ Change the question to one line
 
 from pathlib import Path
 from colorama import Fore, Style
@@ -102,8 +103,9 @@ def save_output(spaced_output, output):
         file.write(spaced_output)
     success(f'Output file created at {output}')
 
-def read():
-    pass
+@app.command()
+def read(file_to_read: Path, color: str = typer.Option('#FFFFFF', '-c', '--color')):
+    print(file_to_read)
 
 def error(message: str = 'An unexpected error has occurred'):
     # Standard error message
