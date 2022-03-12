@@ -8,24 +8,33 @@
 
 from pathlib import Path
 from colorama import Fore, Style
-from rgbprint.new_print import _print as print
+#from rgbprint.rgbprint import _print as print #! Change this shit
 import colorama
 from PIL import Image
 import typer
 
-app = typer.Typer()
+app = typer.Typer(add_completion=False)
 colorama.init()
 
 # Main command of the app
 @app.callback(invoke_without_command=True)
-def ascii(image_path: Path, invert: bool = typer.Option(False, '-i', '--invert'), output: Path = typer.Option('', '-o', '--output'), color: str = typer.Option('#FFFFFF', '-c', '--color')):
+def ascii(image_path: Path, invert: bool = typer.Option(False, '-i', '--invert'), output: Path = typer.Option('', '-o', '--output'), color: str = typer.Option('#FFFFFF', '-c', '--color'), read: bool = typer.Option(False, '-r', '--read')):
+    
     # Check if image exist and is in the correct format
     if not image_path.exists():
-        error('The path doesn\'t exist!')
+        error(f'The path \'{image_path}\' doesn\'t exist!')
     
     if not image_path.is_file():
-        error('The path isn\'t a file')
-        
+        error(f'The path \'{image_path}\' isn\'t a file')
+    
+    try:
+        if read:
+            with open(image_path, 'r') as file:
+                typer.echo(file.read())
+                return
+    except Exception as e:
+        error(e)
+
     density, width = image(image_path)
     image_str = associate(density, invert)
     print_(image_str, width, output, color)
@@ -77,7 +86,7 @@ def print_(image_str: str, width: int, output: Path, color: str):
     for i in range(0, len(image_str), width):
         lines.append(image_str[i:i+width])
     spaced_output = '\n'.join(lines)
-    print(spaced_output, color=color, end='\n\n') # The final output
+    print(spaced_output, end='\n\n') # The final output
     
     # If the user request it the app put the output too a external file
     save_output(spaced_output, output)
@@ -102,10 +111,6 @@ def save_output(spaced_output, output):
     with open(output, 'w') as file:
         file.write(spaced_output)
     success(f'Output file created at {output}')
-
-@app.command()
-def read(file_to_read: Path, color: str = typer.Option('#FFFFFF', '-c', '--color')):
-    print(file_to_read)
 
 def error(message: str = 'An unexpected error has occurred'):
     # Standard error message
