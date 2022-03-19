@@ -70,7 +70,7 @@ def image(path: Path, size: float):
         
         return density, fixed_image.width
 
-def associate(density: list, invert):
+def associate(density: list[int], invert):
     # Generating a dict with all the associations leter to density
     # And put all into a string
     # Get a density dict
