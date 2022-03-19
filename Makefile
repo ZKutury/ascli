@@ -6,7 +6,7 @@ all: install
 install: main.py requirements.txt
 	@echo [ SETUP ] Installing ascli, made by ZKutury.
 	cp main.py $(install_path)
-	pip install -r requirements.txt
+	pip3 install -r requirements.txt
 	chmod 755 /usr/local/bin/ascli
 
 uninstall:
